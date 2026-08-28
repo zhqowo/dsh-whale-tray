@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "DSH 大肥鱼唤醒助手",
+  "version": "1.0.1",
+  "description": "配合桌面大肥鱼,把后台的 DeepSeek Harness 标签唤醒到前台",
+  "permissions": ["tabs"],
+  "host_permissions": ["http://127.0.0.1:9334/*", "http://127.0.0.1:9335/*"],
+  "background": { "service_worker": "bg.js" }
+}
