@@ -1,6 +1,6 @@
 # 🐳 大肥鱼(DeepSeek Harness Whale Tray)
 
-DSH(DeepSeek Harness)右下角**托盘小鲸鱼**:一键开关 dsh 服务、唤起 Web、重启服务。**独立于 dsh 进程**,类似 Steam 的启动器。
+DSH(DeepSeek Harness)右下角**托盘小鲸鱼**:一键开关 dsh 服务、唤起 Web、重启服务、一键充值。**独立于 dsh 进程**,类似 Steam 的启动器。
 
 ## 功能
 
@@ -10,6 +10,7 @@ DSH(DeepSeek Harness)右下角**托盘小鲸鱼**:一键开关 dsh 服务、唤�
 | 左键 / 双击鲸鱼 | 唤起 DSH Web(通过配套浏览器扩展切换后台标签,**不新开页**) |
 | 右键 → 开启/关闭大肥鱼 | 动态切换,dsh 状态每 2 秒自动刷新 |
 | 右键 → 重启服务 | 仅 dsh 运行时显示;停旧服务 → 等端口释放 → 隐藏重启 |
+| 右键 → 充值 | 在 Edge 中打开 `https://platform.deepseek.com/usage` |
 | 右键 → 退出 | 先关 dsh 服务,再退出程序 |
 
 ## 技术要点
@@ -26,9 +27,17 @@ DSH(DeepSeek Harness)右下角**托盘小鲸鱼**:一键开关 dsh 服务、唤�
 ```
 WhaleTray.cs      # 主程序(C#, WinForms, .NET Framework 4.x)
 app.manifest      # DPI 感知清单
-whale*.png/.ico   # 图标(原图来自 dsh-whale-widget 素材,白色头发修复版)
+whale*.png/.ico   # 图标(基于 dsh-whale-widget 素材制作,白头发修复版)
 extension/        # 配套浏览器扩展(唤醒后台 DSH 标签)
 ```
+
+## 🖼️ 图标出处
+
+- 图标素材来自 **dsh-whale-widget(DeepSeek 余额小鲸鱼挂件)插件**,仓库:
+  [MeteorNOX/DeepSeek-Balance-Whale-Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget)(MIT License,Copyright © 2026 MeteorNOX)
+- 插件内**未标注鲸鱼素材的原始画师/作者**(仅以 "DSniang" 命名,疑似 DeepSeek 娘化同人图)。
+  若素材作者看到并希望署名或删除,请提 issue,我们立即处理。
+- 本仓库对原图做了:裁剪(cut-out)、缩放到 16/32/48/256、小尺寸白色提亮修复,并打包为 `.ico`。
 
 ## 构建(Windows)
 
