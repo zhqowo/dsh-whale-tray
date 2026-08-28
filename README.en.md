@@ -1,5 +1,7 @@
 # 🐳 Da Fei Yu — DeepSeek Harness Whale Tray
 
+English | [中文](README.md)
+
 A system-tray **whale launcher** for [DeepSeek Harness](https://github.com/deepseek-ai) (dsh): one-click start/stop of the dsh service, wake the Web UI, restart the service, and open the usage/billing page. **Runs as an independent process** — like a Steam launcher for dsh.
 
 ## Features
