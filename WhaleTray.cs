@@ -14,6 +14,7 @@ public class WhaleTray : Form
     private ContextMenuStrip menu;
     private ToolStripMenuItem toggleItem;
     private ToolStripMenuItem restartItem;
+    private ToolStripMenuItem rechargeItem;
     private System.Windows.Forms.Timer clickTimer;
     private System.Windows.Forms.Timer refreshTimer;
     private Icon whaleIcon;
@@ -70,6 +71,9 @@ public class WhaleTray : Form
         restartItem = new ToolStripMenuItem("重启服务");
         restartItem.Click += delegate { RestartDsh(); };
         menu.Items.Add(restartItem);
+        rechargeItem = new ToolStripMenuItem("充值");
+        rechargeItem.Click += delegate { OpenUrlInBrowser("https://platform.deepseek.com/usage"); };
+        menu.Items.Add(rechargeItem);
         menu.Items.Add(new ToolStripSeparator());
         ToolStripMenuItem exitItem = new ToolStripMenuItem("退出");
         exitItem.Click += delegate { ExitApp(); };
@@ -205,6 +209,11 @@ public class WhaleTray : Form
 
     private void OpenWebInEdge()
     {
+        OpenUrlInBrowser(WEB_URL);
+    }
+
+    private void OpenUrlInBrowser(string url)
+    {
         string[] candidates = new string[]
         {
             @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
@@ -214,11 +223,11 @@ public class WhaleTray : Form
         {
             if (File.Exists(path))
             {
-                try { Process.Start(path, WEB_URL); return; }
+                try { Process.Start(path, url); return; }
                 catch { }
             }
         }
-        OpenWeb();   // Edge 不存在 → 退回系统默认
+        try { Process.Start(url); } catch { }   // Edge 不存在 → 退回系统默认
     }
 
     private void EnsureStarted()
