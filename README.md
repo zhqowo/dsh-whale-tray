@@ -1,5 +1,7 @@
 # 🐳 大肥鱼(DeepSeek Harness Whale Tray)
 
+[English](README.en.md) | 中文
+
 DSH(DeepSeek Harness)右下角**托盘小鲸鱼**:一键开关 dsh 服务、唤起 Web、重启服务、一键充值。**独立于 dsh 进程**,类似 Steam 的启动器。
 
 ## 功能
