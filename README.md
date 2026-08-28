@@ -27,16 +27,17 @@ DSH(DeepSeek Harness)右下角**托盘小鲸鱼**:一键开关 dsh 服务、唤�
 ```
 WhaleTray.cs      # 主程序(C#, WinForms, .NET Framework 4.x)
 app.manifest      # DPI 感知清单
-whale*.png/.ico   # 图标(基于 dsh-whale-widget 素材制作,白头发修复版)
+whale-source.png  # 原始素材(月匠 B 站原图)
+whale*.png/.ico   # 图标(裁剪 + 缩放 + 白色提亮修复版)
 extension/        # 配套浏览器扩展(唤醒后台 DSH 标签)
 ```
 
 ## 🖼️ 图标出处
 
-- 图标素材来自 **dsh-whale-widget(DeepSeek 余额小鲸鱼挂件)插件**,仓库:
+- **原始作者:月匠(B站)** —— 鲸鱼娘立绘由 B 站画师 **月匠** 绘制(原图见仓库内 `whale-source.png`,来自其 B 站动态)。
+- 收录渠道:**dsh-whale-widget(DeepSeek 余额小鲸鱼挂件)插件**:
   [MeteorNOX/DeepSeek-Balance-Whale-Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget)(MIT License,Copyright © 2026 MeteorNOX)
-- 插件内**未标注鲸鱼素材的原始画师/作者**(仅以 "DSniang" 命名,疑似 DeepSeek 娘化同人图)。
-  若素材作者看到并希望署名或删除,请提 issue,我们立即处理。
+- 若月匠老师希望调整署名、更换或删除素材,请提 issue,我们立即处理。
 - 本仓库对原图做了:裁剪(cut-out)、缩放到 16/32/48/256、小尺寸白色提亮修复,并打包为 `.ico`。
 
 ## 构建(Windows)
