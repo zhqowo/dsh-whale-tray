@@ -7,6 +7,58 @@ let PORT: UInt16 = 3080
 let HOME = NSHomeDirectory()
 let CTL = "\(HOME)/DeepSeekHarness/bin/dsh-ctl.sh"
 
+// MARK: - optional user config
+
+/// Optional config file, so people whose dsh does not run DeepSeek models can point
+/// the billing entry somewhere else **without recompiling**.
+///
+/// Looked up in order — the first existing file wins, and every key is optional:
+///
+///   1. `$DSH_WHALE_TRAY_CONFIG`                    explicit path to a JSON file
+///   2. `~/.config/dsh-whale-tray/config.json`
+///
+/// Recognised keys:
+///
+///   | key            | default                                 |
+///   |----------------|-----------------------------------------|
+///   | `billingUrl`   | `https://platform.deepseek.com/usage`   |
+///   | `billingLabel` | `充值`                                   |
+///
+/// A malformed or unreadable file is ignored silently on purpose: the menu bar must
+/// never fail to come up because of a typo in an optional config.
+struct WhaleConfig {
+    var billingUrl = "https://platform.deepseek.com/usage"
+    var billingLabel = "充值"
+
+    /// Recomputed on each lookup rather than cached in a `static let`: the lookup is
+    /// trivially cheap, and caching it silently pins the first environment it ever saw.
+    static var searchPaths: [String] {
+        var paths: [String] = []
+        if let explicit = ProcessInfo.processInfo.environment["DSH_WHALE_TRAY_CONFIG"],
+           !explicit.isEmpty {
+            paths.append((explicit as NSString).expandingTildeInPath)
+        }
+        paths.append("\(HOME)/.config/dsh-whale-tray/config.json")
+        return paths
+    }
+
+    static func load() -> WhaleConfig {
+        var cfg = WhaleConfig()
+        for path in searchPaths {
+            guard let data = FileManager.default.contents(atPath: path),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            else { continue }
+            if let url = obj["billingUrl"] as? String, !url.isEmpty { cfg.billingUrl = url }
+            if let label = obj["billingLabel"] as? String, !label.isEmpty { cfg.billingLabel = label }
+            break
+        }
+        return cfg
+    }
+}
+
+let CONFIG = WhaleConfig.load()
+
+
 // MARK: - helpers
 
 /// Cheap liveness probe: try a TCP connect to the dsh web port.
@@ -204,7 +256,7 @@ final class WhaleDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(.separator())
 
-        let billing = NSMenuItem(title: "充值", action: #selector(openBilling), keyEquivalent: "")
+        let billing = NSMenuItem(title: CONFIG.billingLabel, action: #selector(openBilling), keyEquivalent: "")
         billing.target = self
         menu.addItem(billing)
 
@@ -239,7 +291,11 @@ final class WhaleDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc func openBilling() {
-        NSWorkspace.shared.open(URL(string: "https://platform.deepseek.com/usage")!)
+        guard let url = URL(string: CONFIG.billingUrl) else {
+            notify("充值链接无效", CONFIG.billingUrl)
+            return
+        }
+        NSWorkspace.shared.open(url)
     }
 
     @objc func quitApp() {

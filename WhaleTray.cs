@@ -1,10 +1,12 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Drawing;
 using System.IO;
 using System.Threading;
+using System.Web.Script.Serialization;
 using System.Windows.Automation;
 using System.Windows.Forms;
 
@@ -26,9 +28,73 @@ public class WhaleTray : Form
     private static Mutex singleInstance;
 
     private const string WHALE_B64 = "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";
-    private const string BASE_DIR = @"D:\DeepSeekHarness\projects";
-    private const string DSH_CMD = @"D:\DeepSeekHarness\node_modules\.bin\dsh.CMD";
     private const string WEB_URL = "http://127.0.0.1:3080";
+
+    // ---- optional user config -------------------------------------------------
+    //
+    // The dsh location and the billing target used to be hardcoded to the author's
+    // machine. If your dsh lives elsewhere, or you don't run DeepSeek models, drop a
+    // JSON file at %APPDATA%\dsh-whale-tray\config.json (or point the
+    // DSH_WHALE_TRAY_CONFIG environment variable at one):
+    //
+    //   {
+    //     "dshHome":      "C:\\DeepSeekHarness",
+    //     "billingUrl":   "https://platform.deepseek.com/usage",
+    //     "billingLabel": "充值"
+    //   }
+    //
+    // Every key is optional. A missing or malformed file is ignored on purpose —
+    // the tray must still come up.
+
+    private static string ConfigPath()
+    {
+        string custom = Environment.GetEnvironmentVariable("DSH_WHALE_TRAY_CONFIG");
+        if (!string.IsNullOrEmpty(custom)) return custom;
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "dsh-whale-tray", "config.json");
+    }
+
+    private static string ReadConfigValue(string key)
+    {
+        try
+        {
+            string path = ConfigPath();
+            if (!File.Exists(path)) return null;
+            var serializer = new JavaScriptSerializer();
+            var parsed = serializer.Deserialize<Dictionary<string, object>>(File.ReadAllText(path));
+            if (parsed == null || !parsed.ContainsKey(key)) return null;
+            return parsed[key] as string;
+        }
+        catch { return null; }
+    }
+
+    /// Find the dsh install root: explicit config first, then the two known layouts.
+    private static string DetectDshHome()
+    {
+        string configured = ReadConfigValue("dshHome");
+        if (!string.IsNullOrEmpty(configured)) return configured;
+
+        string[] candidates = {
+            @"D:\DeepSeekHarness",
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "DeepSeekHarness"),
+        };
+        foreach (string candidate in candidates)
+            if (Directory.Exists(candidate)) return candidate;
+
+        return candidates[candidates.Length - 1];
+    }
+
+    private static readonly string DSH_HOME = DetectDshHome();
+    private static readonly string BASE_DIR = Path.Combine(DSH_HOME, "projects");
+    private static readonly string DSH_CMD = Path.Combine(DSH_HOME, "node_modules", ".bin", "dsh.CMD");
+
+    private static readonly string BILLING_LABEL = ReadConfigValue("billingLabel") ?? "充值";
+    private static readonly string BILLING_URL =
+        ReadConfigValue("billingUrl") ?? "https://platform.deepseek.com/usage";
+
 
     [STAThread]
     public static void Main()
@@ -71,8 +137,8 @@ public class WhaleTray : Form
         restartItem = new ToolStripMenuItem("重启服务");
         restartItem.Click += delegate { RestartDsh(); };
         menu.Items.Add(restartItem);
-        rechargeItem = new ToolStripMenuItem("充值");
-        rechargeItem.Click += delegate { OpenUrlInBrowser("https://platform.deepseek.com/usage"); };
+        rechargeItem = new ToolStripMenuItem(BILLING_LABEL);
+        rechargeItem.Click += delegate { OpenUrlInBrowser(BILLING_URL); };
         menu.Items.Add(rechargeItem);
         menu.Items.Add(new ToolStripSeparator());
         ToolStripMenuItem exitItem = new ToolStripMenuItem("退出");

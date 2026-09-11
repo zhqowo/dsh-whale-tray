@@ -1,6 +1,6 @@
 #!/bin/zsh
 # dsh service control on macOS (macOS port of the "大肥鱼" launcher's service layer).
-# Usage: dsh-ctl.sh start|stop|restart|status|open|pid
+# Usage: dsh-ctl.sh start|stop|restart|status|open|pid|billing
 export PATH="$HOME/.local/node/bin:$PATH"
 export DSH_HOME="$HOME/.dsh"
 
@@ -8,6 +8,18 @@ DIR="$HOME/DeepSeekHarness"
 BIN="$DIR/node_modules/.bin/dsh"
 LOG="$DIR/dsh-web.log"
 PORT=3080
+
+# Billing target. Defaults to DeepSeek's usage page, but this launcher works with any
+# dsh model provider — override it in ~/.config/dsh-whale-tray/config.json:
+#   { "billingUrl": "https://example.com/billing" }
+# Same file the menu-bar app reads ($DSH_WHALE_TRAY_CONFIG overrides the path).
+# Parsed with sed rather than jq so the script keeps working with no extra tooling.
+CONFIG_FILE="${DSH_WHALE_TRAY_CONFIG:-$HOME/.config/dsh-whale-tray/config.json}"
+BILLING_URL="https://platform.deepseek.com/usage"
+if [ -f "$CONFIG_FILE" ]; then
+  _u=$(sed -n 's/.*"billingUrl"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$CONFIG_FILE" | head -1)
+  [ -n "$_u" ] && BILLING_URL="$_u"
+fi
 
 dsh_pid() {
   /usr/sbin/lsof -nP -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null | head -1
@@ -63,8 +75,8 @@ case "$1" in
     echo "opened http://127.0.0.1:$PORT/"
     ;;
   billing)
-    open -a "Microsoft Edge" "https://platform.deepseek.com/usage" 2>/dev/null \
-      || open "https://platform.deepseek.com/usage"
+    open -a "Microsoft Edge" "$BILLING_URL" 2>/dev/null || open "$BILLING_URL"
+    echo "$BILLING_URL"
     ;;
   *)
     echo "usage: dsh-ctl.sh start|stop|restart|status|pid|open|billing"

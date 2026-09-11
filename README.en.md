@@ -65,7 +65,7 @@ violating any of them silently kills every permission the app has.
 ### Build (Windows)
 
 ```bat
-C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:winexe /out:DaFeiYu.exe /win32icon:whale.ico /win32manifest:app.manifest /codepage:65001 /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:UIAutomationClient.dll /r:UIAutomationTypes.dll WhaleTray.cs
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:winexe /out:DaFeiYu.exe /win32icon:whale.ico /win32manifest:app.manifest /codepage:65001 /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll /r:UIAutomationClient.dll /r:UIAutomationTypes.dll WhaleTray.cs
 ```
 
 ### Extension setup (one-time)
@@ -86,6 +86,55 @@ cd macos && zsh build.sh     # builds and installs ~/Desktop/大肥鱼.app
 
 Details — icon composition, how left/right click separation works, AppleScript gotchas, and the
 **must-read TCC permission section** — live in [`macos/README.md`](macos/README.md).
+
+---
+
+## ⚙️ Configuration (optional, both platforms)
+
+**It works with no configuration at all** — the defaults target a standard DeepSeek + dsh setup.
+
+<details>
+<summary><b>The "Top up" item points at DeepSeek — how do I change it?</b></summary>
+
+The menu's **Top up** entry opens `https://platform.deepseek.com/usage` by default.
+But this launcher only starts/stops the dsh service — it has nothing to do with which model
+provider you use, and you are free to run something other than DeepSeek.
+
+Drop a JSON file and you can repoint it **without recompiling**:
+
+<table>
+<tr><th>Platform</th><th>Path</th></tr>
+<tr><td>macOS</td><td><code>~/.config/dsh-whale-tray/config.json</code></td></tr>
+<tr><td>Windows</td><td><code>%APPDATA%\dsh-whale-tray\config.json</code></td></tr>
+</table>
+
+> The `DSH_WHALE_TRAY_CONFIG` environment variable overrides the path on either platform.
+
+```jsonc
+{
+  // page the billing entry opens
+  "billingUrl":   "https://your-provider.example/billing",
+  // text shown for that menu item (default: 充值)
+  "billingLabel": "Billing",
+
+  // Windows only: where your dsh is installed.
+  // Left out, it probes D:\DeepSeekHarness, then %USERPROFILE%\DeepSeekHarness
+  "dshHome":      "C:\\DeepSeekHarness"
+}
+```
+
+| key | default | what it does |
+|---|---|---|
+| `billingUrl` | `https://platform.deepseek.com/usage` | page the billing entry opens |
+| `billingLabel` | `充值` | label of that menu item |
+| `dshHome` | auto-detected | **Windows only**: dsh install root |
+
+- **Every key is optional** — set only the ones you care about
+- Missing file / malformed JSON / wrong type → **silently falls back to the defaults**; the tray
+  or menu bar must never fail to come up over an optional config
+- The CLI (`macos/dsh-ctl.sh billing`) reads the same file
+- JSON comments are not supported — the block above is marked `jsonc` only to allow annotations
+</details>
 
 ---
 
@@ -147,11 +196,35 @@ cordis.patch.yml  # the patch file that manifest points at
 
 ## 🖼️ Artwork credit
 
-- **Original artist: Yue Jiang (月匠, Bilibili)** — the whale-girl artwork was drawn by Bilibili artist **Yue Jiang** (source image: `whale-source.png`, from their Bilibili post).
-- Bundled via the **dsh-whale-widget** plugin:
-  [MeteorNOX/DeepSeek-Balance-Whale-Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget) (MIT License, Copyright © 2026 MeteorNOX)
-- If Yue Jiang would like the attribution adjusted, or the artwork replaced/removed, please open an issue and we will act immediately.
-- This repo has: cut the artwork out, resized it to 16/32/48/256, applied a small-size white-hair enhancement, and packed it into `.ico`.
+**I did not draw the whale — here is where it comes from.** Every icon on both platforms is
+derived from that one original.
+
+- **Original artist: Yue Jiang (月匠, Bilibili)** — the whale-girl artwork was drawn by the Bilibili
+  artist **Yue Jiang** (source image: [`whale-source.png`](whale-source.png), from their Bilibili post)
+- **Obtained via** the **dsh-whale-widget** plugin —
+  [MeteorNOX/DeepSeek-Balance-Whale-Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget)
+  (MIT License, Copyright © 2026 MeteorNOX)
+- If Yue Jiang would like the credit adjusted, or the artwork replaced or removed, please open an
+  issue and **it will be handled immediately**
+
+No artistic changes were made — only mechanical ones:
+
+| File | Platform | How it was produced |
+|---|---|---|
+| `whale.ico` | Windows | cropped → resized to 16/32/48/256 → packed as ico |
+| `whale16/32/48/256.png` | Windows | the same, as individual size files |
+| `macos/whale256.png` | macOS | the original downscaled to 256 (the build's starting asset) |
+| menu-bar `whale.png` / `whale@2x.png` | macOS | the above via `sips -z` to **22px / 44px** |
+| the app icon `AppIcon.icns` | macOS | the above laid over a gradient card (`icon_compose.swift`), converted to icns |
+
+> **Small sizes get a white-hair brightening pass** — shrunk to 16px the original's lines smear into
+> a dark blob; brightening them is what makes it legible.
+>
+> The macOS 22px icon has its own trap: `NSImage(contentsOfFile:)` does **not** auto-load the `@2x`
+> sibling, so a single rep looks fuzzy on Retina. The build script ships both.
+>
+> Full third-party asset notice: [NOTICE](NOTICE).
+
 
 ## Requirements
 

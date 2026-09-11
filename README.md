@@ -63,7 +63,7 @@ DSH(DeepSeek Harness)的**一键开关** —— Windows 是右下角托盘,macOS
 ### 构建(Windows)
 
 ```bat
-C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:winexe /out:大肥鱼.exe /win32icon:whale.ico /win32manifest:app.manifest /codepage:65001 /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:UIAutomationClient.dll /r:UIAutomationTypes.dll WhaleTray.cs
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:winexe /out:大肥鱼.exe /win32icon:whale.ico /win32manifest:app.manifest /codepage:65001 /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll /r:UIAutomationClient.dll /r:UIAutomationTypes.dll WhaleTray.cs
 ```
 
 ### 扩展安装(一次性)
@@ -83,6 +83,53 @@ cd macos && zsh build.sh     # 编译并安装到 ~/Desktop/大肥鱼.app
 
 细节(图标合成、左右键分离原理、AppleScript 的坑、**以及必读的 TCC 权限章节**)
 见 [`macos/README.md`](macos/README.md)。
+
+---
+
+## ⚙️ 配置(可选,两个平台都支持)
+
+**不配置也能用** —— 默认值就是给标准 DeepSeek + dsh 环境准备的。
+
+<details>
+<summary><b>「充值」写死指向 DeepSeek?我怎么改成别的?</b></summary>
+
+菜单里的**充值**默认打开 `https://platform.deepseek.com/usage`。
+但本启动器只管开关 dsh 服务,跟模型供应商无关 —— 你完全可以用别家的模型。
+
+放一个 JSON 配置文件就能改,**不用重新编译**:
+
+<table>
+<tr><th>平台</th><th>路径</th></tr>
+<tr><td>macOS</td><td><code>~/.config/dsh-whale-tray/config.json</code></td></tr>
+<tr><td>Windows</td><td><code>%APPDATA%\dsh-whale-tray\config.json</code></td></tr>
+</table>
+
+> 也可以用环境变量 `DSH_WHALE_TRAY_CONFIG` 指定任意路径(两平台通用)。
+
+```jsonc
+{
+  // 充值/账单要打开的页面
+  "billingUrl":   "https://your-provider.example/billing",
+  // 菜单里那一项显示什么字(默认「充值」)
+  "billingLabel": "账单",
+
+  // 仅 Windows:你的 dsh 装在哪儿
+  // 留空则自动探测 D:\DeepSeekHarness,再退回 %USERPROFILE%\DeepSeekHarness
+  "dshHome":      "C:\\DeepSeekHarness"
+}
+```
+
+| 键 | 默认值 | 作用 |
+|---|---|---|
+| `billingUrl` | `https://platform.deepseek.com/usage` | 充值项打开的网址 |
+| `billingLabel` | `充值` | 充值项的显示文字 |
+| `dshHome` | 自动探测 | **仅 Windows**:dsh 安装根目录 |
+
+- **所有键都是可选的**,给几个生效几个
+- 文件不存在 / JSON 写错 / 类型不对 → **静默回退默认值**,绝不让托盘或菜单栏起不来
+- 命令行 `macos/dsh-ctl.sh billing` 读同一个文件
+- 不支持 JSON 注释 —— 上面只是为了标注才写成 `jsonc`
+</details>
 
 ---
 
@@ -145,11 +192,32 @@ cordis.patch.yml  # 上面那个 manifest 指向的 patch 文件
 
 ## 🖼️ 图标出处
 
-- **原始作者:月匠(B站)** —— 鲸鱼娘立绘由 B 站画师 **月匠** 绘制(原图见仓库内 `whale-source.png`,来自其 B 站动态)。
-- 收录渠道:**dsh-whale-widget(DeepSeek 余额小鲸鱼挂件)插件**:
-  [MeteorNOX/DeepSeek-Balance-Whale-Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget)(MIT License,Copyright © 2026 MeteorNOX)
-- 若月匠老师希望调整署名、更换或删除素材,请提 issue,我们立即处理。
-- 本仓库对原图做了:裁剪(cut-out)、缩放到 16/32/48/256、小尺寸白色提亮修复,并打包为 `.ico`。
+**鲸鱼娘立绘不是我画的**,出处如下,两个平台的图标都从这张原图加工而来。
+
+- **原始作者:月匠(B站)** —— 鲸鱼娘立绘由 B 站画师 **月匠** 绘制
+  (原图见仓库内 [`whale-source.png`](whale-source.png),来自其 B 站动态)
+- **收录渠道**:**dsh-whale-widget(DeepSeek 余额小鲸鱼挂件)插件** ——
+  [MeteorNOX/DeepSeek-Balance-Whale-Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget)
+  (MIT License, Copyright © 2026 MeteorNOX)
+- 若月匠老师希望调整署名、更换或删除素材,请提 issue,**我们立即处理**
+
+本仓库对原图**没有做美术改动**,只做了机械处理:
+
+| 文件 | 平台 | 怎么来的 |
+|---|---|---|
+| `whale.ico` | Windows | 原图裁剪 → 缩放到 16/32/48/256 → 打包 ico |
+| `whale16/32/48/256.png` | Windows | 同上,各尺寸单独文件 |
+| `macos/whale256.png` | macOS | 原图缩小到 256(构建素材的起点) |
+| 菜单栏 `whale.png` / `whale@2x.png` | macOS | 上者 `sips -z` 缩成 **22px / 44px** |
+| app 图标 `AppIcon.icns` | macOS | 上者叠在渐变卡片上(`icon_compose.swift`)后转 icns |
+
+> **小尺寸做了白色提亮修复** —— 原图缩到 16px 后线条会糊成一团暗色,提亮后才看得清。
+>
+> macOS 那 22px 图标还有个坑:`NSImage(contentsOfFile:)` **不会**自动加载 `@2x` 兄弟文件,
+> 只塞一个在 Retina 上会发虚,所以构建脚本两个尺寸都塞。
+>
+> 完整第三方素材声明见 [NOTICE](NOTICE)。
+
 
 ## 依赖
 

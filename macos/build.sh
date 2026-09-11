@@ -5,6 +5,23 @@
 # script's own directory, so it can be re-run any time:
 #     zsh ~/DeepSeekHarness/migration/menubar/build.sh
 #
+# ⚠️⚠️ READ THIS BEFORE RUNNING ON A MACHINE THAT ALREADY HAS 大肥鱼 INSTALLED
+#
+# The default run REPLACES ~/Desktop/大肥鱼.app and then launches it. Both halves
+# are destructive on a machine where that app already holds TCC grants (Screen
+# Recording / Accessibility / Full Disk Access): ad-hoc signatures bind grants to
+# the binary's cdhash, so a rebuild silently invalidates all of them, and
+# launching the new copy changes the "responsible process" that permissions are
+# matched against. See README.md's TCC section.
+#
+# To build WITHOUT touching the installed app (e.g. to produce a distributable
+# zip, or to try a change safely), override the output path:
+#
+#     WHALE_APP_OUT=/tmp/whale-staging/大肥鱼.app zsh build.sh
+#
+# In that mode the script never overwrites the Desktop app, never kills a running
+# WhaleLauncher, and never launches the result.
+#
 # Three macOS gotchas this script works around:
 #  1. xcrun defaults to MacOSX27.0.sdk (built by Swift 6.4) which the installed
 #     Swift 6.3.3 compiler cannot read -> pass -sdk MacOSX26.x.sdk explicitly.
@@ -16,7 +33,10 @@ set -e
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 BUILD="$HOME/whale-menubar-build"
-APP="$HOME/Desktop/大肥鱼.app"
+DEFAULT_APP="$HOME/Desktop/大肥鱼.app"
+APP="${WHALE_APP_OUT:-$DEFAULT_APP}"
+STAGING=0
+[ "$APP" != "$DEFAULT_APP" ] && STAGING=1
 LSREG=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 
 # icon framing (tuned by eye)
@@ -80,8 +100,8 @@ cat > "$BUNDLE/Contents/Info.plist" <<'PLIST'
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleSignature</key><string>????</string>
-    <key>CFBundleShortVersionString</key><string>2.1</string>
-    <key>CFBundleVersion</key><string>3</string>
+    <key>CFBundleShortVersionString</key><string>2.2</string>
+    <key>CFBundleVersion</key><string>4</string>
     <key>LSUIElement</key><true/>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>NSHighResolutionCapable</key><true/>
@@ -92,7 +112,19 @@ PLIST
 echo "=== 6. ad-hoc sign ==="
 /usr/bin/codesign --force --sign - "$BUNDLE" 2>&1 | tail -1 || true
 
-echo "=== 7. install (remove destination first: cp -R nests otherwise) ==="
+echo "=== 7. install ==="
+if [ "$STAGING" = "1" ]; then
+  rm -rf "$APP"
+  mkdir -p "$(dirname "$APP")"
+  cp -R "$BUNDLE" "$APP"
+  echo "  staged at: $APP"
+  echo "  (skipped: killing a running WhaleLauncher, replacing the Desktop app, launching)"
+  echo "  ⚠️  Do NOT run this build while ~/Desktop/大肥鱼.app is your live install —"
+  echo "      two bundles sharing bundle id local.dsh.whale.menubar confuse TCC."
+  echo "DONE (staging build, Desktop app untouched)"
+  exit 0
+fi
+
 pkill -f "WhaleLauncher" 2>/dev/null || true
 sleep 1
 mkdir -p "$HOME/DeepSeekHarness/migration/old-launcher"

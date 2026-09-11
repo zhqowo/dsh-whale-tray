@@ -1,0 +1,21 @@
+Third-party notice
+==================
+
+The MIT license in LICENSE covers the source code in this repository.
+
+Bundled artwork is the exception:
+
+- whale-source.png, whale.ico, whale16.png, whale32.png, whale48.png,
+  whale256.png, macos/whale256.png
+
+  The whale-girl character. Original artist: **Yue Jiang (月匠)** on Bilibili.
+  Obtained via the dsh-whale-widget plugin
+  (https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget, MIT License,
+  Copyright © 2026 MeteorNOX).
+
+  Only mechanical processing was applied here — crop, downscale to
+  16/32/48/256, a small-size brightening pass, and packaging into .ico / .icns.
+  No artistic changes.
+
+  If the original artist would like the credit adjusted, or the artwork
+  replaced or removed, please open an issue and it will be handled immediately.
