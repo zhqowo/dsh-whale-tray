@@ -143,3 +143,10 @@ dist/             # 打包好的 macOS .app
 - DeepSeek Harness(dsh)
 - Windows:系统已装 Edge / Chrome(唤起用)
 - macOS:系统已装 Edge / Chrome(切标签用);dsh 侧见 `macos/README.md`
+
+## 许可
+
+[MIT](LICENSE) © 2026 zhqowo —— 随便用、改、商用,保留版权声明即可。
+
+⚠️ 图标/素材除外:**鲸鱼素材版权属原画师月匠(B站)**,收录链路与署名要求见上面「图标出处」一节;
+OpenClaw 龙虾素材来自 OpenClaw 官方包。二次分发请一并保留这些署名。
