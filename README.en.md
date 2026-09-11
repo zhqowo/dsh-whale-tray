@@ -6,8 +6,9 @@ One-click start/stop for [DeepSeek Harness](https://github.com/deepseek-ai) (dsh
 a **system tray** app on Windows, a **menu-bar** app on macOS. **Runs as an independent process**,
 like a Steam launcher for dsh.
 
-This repo also ships **🦞 OpenClaw Lobster** for macOS — the same skeleton, pointed at the
-OpenClaw gateway instead.
+> 🦞 **Looking for the OpenClaw Lobster?** It now lives in its own repo:
+> **[zhqowo/openclaw-menubar](https://github.com/zhqowo/openclaw-menubar)** — the two serve
+> different audiences, so splitting them lets each be discovered and released on its own.
 
 ## Which one do I want
 
@@ -15,7 +16,6 @@ OpenClaw gateway instead.
 |---|---|---|---|
 | **Windows** | `大肥鱼.exe` | system tray (bottom-right) | [`WhaleTray.cs`](WhaleTray.cs) |
 | **macOS** | `大肥鱼.app` | menu bar (top-right) | [`macos/`](macos/) |
-| **macOS** | `OpenClaw.app` 🦞 | menu bar (top-right) | [`openclaw/`](openclaw/) |
 
 ## Feature comparison
 
@@ -89,25 +89,29 @@ Details — icon composition, how left/right click separation works, AppleScript
 
 ---
 
-# 🦞 OpenClaw Lobster (macOS)
+# 🦞 OpenClaw Lobster → moved to its own repo
 
-One-click toggle for the OpenClaw gateway. Simpler than Da Fei Yu:
-**left click opens the Control UI, right click offers only "Start gateway / Quit"**.
+The OpenClaw gateway menu-bar toggle **used to** live here. It has moved to:
 
-- The gateway runs under **launchd**, so starting it is silent and windowless
-- Left click reads the token from the config and builds the URL — **the Control UI opens
-  pre-authenticated**
-- **Quitting also stops the gateway**
-- The icon is OpenClaw's official vector mascot, rasterised from the SVG shipped in its own npm package
+### 👉 **[zhqowo/openclaw-menubar](https://github.com/zhqowo/openclaw-menubar)**
 
-```sh
-cd openclaw && zsh build.sh          # builds and installs ~/Desktop/OpenClaw.app
-cd openclaw && zsh make_assets.sh    # refresh icon assets after upgrading OpenClaw
-```
-
-Details in [`openclaw/README.md`](openclaw/README.md).
+Source, build scripts, icon assets and releases all live there now.
+The old `openclaw/` directory was removed from this repo.
 
 ---
+
+## Install as a DSH plugin
+
+This repo declares a `dsh.bundle` manifest, so it can be installed as a plugin
+(lets the agent discover and manage the launcher):
+
+```sh
+dsh plugin --profile web add github:zhqowo/dsh-whale-tray
+```
+
+> What gets installed is only the **manifest** — the app that does the work is the tray/menu-bar
+> binary built from `WhaleTray.cs` / `macos/`. Desktop apps cannot be distributed over npm;
+> this entry point exists so DSH can discover it.
 
 ## Downloads
 
@@ -116,7 +120,9 @@ Details in [`openclaw/README.md`](openclaw/README.md).
 | File | What |
 |---|---|
 | `dist/大肥鱼.app.zip` | macOS menu-bar Da Fei Yu |
-| `dist/OpenClaw.app.zip` | macOS menu-bar OpenClaw Lobster |
+
+> 🦞 The OpenClaw Lobster download lives in the new repo:
+> [openclaw-menubar/releases](https://github.com/zhqowo/openclaw-menubar/releases/latest)
 
 > Because they are ad-hoc signed, Gatekeeper blocks the first launch: right-click → **Open**, or
 > `xattr -d com.apple.quarantine 大肥鱼.app`.
@@ -131,10 +137,13 @@ app.manifest      # Windows DPI awareness manifest
 extension/        # Windows companion extension (wakes the background DSH tab)
 whale*.*          # Windows icons (cut-out + resized + small-size white-hair fix)
 macos/            # macOS Da Fei Yu (Swift) + dsh-ctl.sh
-openclaw/         # macOS OpenClaw Lobster (Swift) + openclaw-ctl.sh
 tools/            # Helper tools (check-perms.sh health check / uictl UI automation)
 dist/             # Packaged macOS .app bundles
+package.json      # dsh plugin manifest (declares dsh.bundle for `dsh plugin add`)
+cordis.patch.yml  # the patch file that manifest points at
 ```
+
+> 🦞 The OpenClaw Lobster moved to [zhqowo/openclaw-menubar](https://github.com/zhqowo/openclaw-menubar).
 
 ## 🖼️ Artwork credit
 
@@ -143,10 +152,16 @@ dist/             # Packaged macOS .app bundles
   [MeteorNOX/DeepSeek-Balance-Whale-Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget) (MIT License, Copyright © 2026 MeteorNOX)
 - If Yue Jiang would like the attribution adjusted, or the artwork replaced/removed, please open an issue and we will act immediately.
 - This repo has: cut the artwork out, resized it to 16/32/48/256, applied a small-size white-hair enhancement, and packed it into `.ico`.
-- The **OpenClaw lobster** comes from the SVG inside OpenClaw's own npm package (`dist/control-ui/favicon.svg`); the vector original is kept in `openclaw/assets/`.
 
 ## Requirements
 
 - DeepSeek Harness (dsh)
 - Windows: Edge or Chrome installed (for the wake-up feature)
 - macOS: Edge or Chrome installed (for tab switching); see `macos/README.md` for the dsh side
+
+## License
+
+[MIT](LICENSE) © 2026 zhqowo — use it, change it, ship it commercially; just keep the copyright notice.
+
+⚠️ Artwork is the exception: **the whale artwork is © Yue Jiang (月匠, Bilibili)** — see the
+"Artwork credit" section above for the attribution chain. Keep that credit if you redistribute.

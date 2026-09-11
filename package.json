@@ -1,0 +1,37 @@
+{
+  "name": "dsh-whale-tray",
+  "version": "1.0.0",
+  "description": "🐳 大肥鱼 — DeepSeek Harness (dsh) launcher: a Windows tray app and a macOS menu-bar app to start/stop the dsh service, summon the web UI, restart and top up — independent of the dsh process. Ships the compiled desktop apps from Releases.",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek",
+    "deepseek-harness",
+    "launcher",
+    "tray",
+    "menubar",
+    "menu-bar",
+    "macos",
+    "windows",
+    "swift",
+    "winforms",
+    "whale"
+  ],
+  "homepage": "https://github.com/zhqowo/dsh-whale-tray",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhqowo/dsh-whale-tray.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zhqowo/dsh-whale-tray/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

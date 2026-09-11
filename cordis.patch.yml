@@ -1,0 +1,12 @@
+# Minimal no-op bundle patch.
+#
+# This file exists so the package is installable via `dsh plugin add`, which
+# requires package.json to declare `dsh.bundle.patch` pointing at a patch file.
+#
+# 大肥鱼 is a *desktop* launcher (Windows tray / macOS menu-bar). A desktop app
+# cannot be distributed through npm, so installing this plugin is a
+# discovery/registration entry point rather than the app itself — grab the
+# actual .exe / .app from the repo's Releases.
+#
+# So this patch intentionally changes nothing.
+[]

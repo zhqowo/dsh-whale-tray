@@ -5,7 +5,9 @@
 DSH(DeepSeek Harness)的**一键开关** —— Windows 是右下角托盘,macOS 是右上角菜单栏。
 **独立于 dsh 进程**,类似 Steam 的启动器。
 
-本仓库还附带 macOS 上的 **🦞 OpenClaw 龙虾**(OpenClaw 网关的一键开关,同一套骨架)。
+> 🦞 **找 OpenClaw 龙虾?** 那个已经拆到独立仓库了:
+> **[zhqowo/openclaw-menubar](https://github.com/zhqowo/openclaw-menubar)** —— 两者受众不同,
+> 分开之后各自能被搜到、各自独立发版。
 
 ## 我该用哪个
 
@@ -13,7 +15,6 @@ DSH(DeepSeek Harness)的**一键开关** —— Windows 是右下角托盘,macOS
 |---|---|---|---|
 | **Windows** | `大肥鱼.exe` | 右下角**托盘** | [`WhaleTray.cs`](WhaleTray.cs) |
 | **macOS** | `大肥鱼.app` | 右上角**菜单栏** | [`macos/`](macos/) |
-| **macOS** | `OpenClaw.app` 🦞 | 右上角**菜单栏** | [`openclaw/`](openclaw/) |
 
 ## 功能对照
 
@@ -85,23 +86,30 @@ cd macos && zsh build.sh     # 编译并安装到 ~/Desktop/大肥鱼.app
 
 ---
 
-# 🦞 OpenClaw 龙虾(macOS)
+# 🦞 OpenClaw 龙虾 → 已拆分为独立仓库
 
-OpenClaw 网关的一键开关。比大肥鱼简单:**左键开 Control UI,右键只有「开启网关/退出」两项**。
+OpenClaw 网关的菜单栏开关**曾经**和本仓库放在一起,现已迁到:
 
-- 网关走 **launchd**,启动天然静默无窗口
-- 左键读配置里的 token 拼 URL,**Control UI 免验证直接进**
-- **退出会一并停网关**
-- 图标是 OpenClaw 官方矢量吉祥物(从它自己的 npm 包里取出来栅格化的)
+### 👉 **[zhqowo/openclaw-menubar](https://github.com/zhqowo/openclaw-menubar)**
 
-```sh
-cd openclaw && zsh build.sh          # 编译并安装到 ~/Desktop/OpenClaw.app
-cd openclaw && zsh make_assets.sh    # 升级 OpenClaw 后刷新图标素材
-```
+它跟大肥鱼是**两个受众**:大肥鱼伺候 DSH 用户,龙虾伺候 OpenClaw 用户。
+合在一起会让两边都搜不到对方的关键词,所以拆了。
 
-细节见 [`openclaw/README.md`](openclaw/README.md)。
+- 源码、构建脚本、图标素材、Release 全在新仓库
+- 原 `openclaw/` 目录已从本仓库移除(内容与 Git 记录完整保留在新仓库)
 
 ---
+
+## 作为 DSH 插件安装
+
+本仓库声明了 `dsh.bundle` manifest,所以可以直接当插件装(用于让 agent 自己拉起/管理 DSH):
+
+```sh
+dsh plugin --profile web add github:zhqowo/dsh-whale-tray
+```
+
+> 装的只是**清单**,真正干活的是 `WhaleTray.cs` / `macos/` 里编译出来的菜单栏应用 ——
+> 桌面应用没法通过 npm 分发。这个入口的意义是让 DSH 能发现并管理它。
 
 ## 下载
 
@@ -110,7 +118,10 @@ cd openclaw && zsh make_assets.sh    # 升级 OpenClaw 后刷新图标素材
 | 文件 | 说明 |
 |---|---|
 | `dist/大肥鱼.app.zip` | macOS 菜单栏版大肥鱼 |
-| `dist/OpenClaw.app.zip` | macOS 菜单栏版 OpenClaw 龙虾 |
+
+> 🦞 OpenClaw 龙虾的下载在新仓库:
+> [openclaw-menubar/releases](https://github.com/zhqowo/openclaw-menubar/releases/latest)
+
 
 > 因为是 ad-hoc 签名,首次打开会被 Gatekeeper 拦一下:右键 →「打开」,或
 > `xattr -d com.apple.quarantine 大肥鱼.app`。
@@ -124,10 +135,13 @@ app.manifest      # Windows DPI 感知清单
 extension/        # Windows 配套浏览器扩展(唤醒后台 DSH 标签)
 whale*.*          # Windows 图标(裁剪 + 缩放 + 白色提亮修复版)
 macos/            # macOS 版大肥鱼(Swift)+ dsh-ctl.sh
-openclaw/         # macOS 版 OpenClaw 龙虾(Swift)+ openclaw-ctl.sh
 tools/            # 配套小工具(check-perms.sh 权限体检 / uictl 界面操作)
 dist/             # 打包好的 macOS .app
+package.json      # dsh 插件清单(声明 dsh.bundle,供 dsh plugin add 安装)
+cordis.patch.yml  # 上面那个 manifest 指向的 patch 文件
 ```
+
+> 🦞 OpenClaw 龙虾已拆到 [zhqowo/openclaw-menubar](https://github.com/zhqowo/openclaw-menubar)。
 
 ## 🖼️ 图标出处
 
@@ -136,7 +150,6 @@ dist/             # 打包好的 macOS .app
   [MeteorNOX/DeepSeek-Balance-Whale-Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget)(MIT License,Copyright © 2026 MeteorNOX)
 - 若月匠老师希望调整署名、更换或删除素材,请提 issue,我们立即处理。
 - 本仓库对原图做了:裁剪(cut-out)、缩放到 16/32/48/256、小尺寸白色提亮修复,并打包为 `.ico`。
-- **OpenClaw 龙虾**素材来自 OpenClaw 官方 npm 包内的 `dist/control-ui/favicon.svg`(矢量原图已收录在 `openclaw/assets/`)。
 
 ## 依赖
 
@@ -148,5 +161,5 @@ dist/             # 打包好的 macOS .app
 
 [MIT](LICENSE) © 2026 zhqowo —— 随便用、改、商用,保留版权声明即可。
 
-⚠️ 图标/素材除外:**鲸鱼素材版权属原画师月匠(B站)**,收录链路与署名要求见上面「图标出处」一节;
-OpenClaw 龙虾素材来自 OpenClaw 官方包。二次分发请一并保留这些署名。
+⚠️ 图标/素材除外:**鲸鱼素材版权属原画师月匠(B站)**,收录链路与署名要求见上面「图标出处」一节。
+二次分发请一并保留这个署名。
