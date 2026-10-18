@@ -5,8 +5,16 @@
 #
 # 大肥鱼 is a *desktop* launcher (Windows tray / macOS menu-bar). A desktop app
 # cannot be distributed through npm, so installing this plugin is a
-# discovery/registration entry point rather than the app itself — grab the
-# actual .exe / .app from the repo's Releases.
+# discovery/registration entry point rather than the app itself.
+#
+# macOS — the real install is one command:
+#   curl -fsSL https://raw.githubusercontent.com/zhqowo/dsh-whale-tray/main/macos/install.sh | zsh
+#   (or grab DaFeiYu.app.zip from Releases / build it with macos/build.sh)
+# Windows — build WhaleTray.cs with csc.exe (see README).
+#
+# Why `dsh plugin add` alone cannot finish the job on macOS (npm cannot ship an
+# .app, Gatekeeper blocks ad-hoc signatures, TCC grants cannot be automated, and
+# paths/ports differ per machine) is written up in macos/README.md.
 #
 # So this patch intentionally changes nothing.
 []
