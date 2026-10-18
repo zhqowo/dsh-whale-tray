@@ -39,6 +39,18 @@ STAGING=0
 [ "$APP" != "$DEFAULT_APP" ] && STAGING=1
 LSREG=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 
+# --- what we ship -------------------------------------------------------------
+# ARCHS: which CPU slices. "arm64 x86_64" (the default) gives a universal app;
+#        set WHALE_ARCHS=arm64 for a smaller Apple-Silicon-only build.
+# MACOS_MIN: the oldest macOS the binary claims to support.
+#
+# ⚠️ Both MUST match Info.plist's LSMinimumSystemVersion — otherwise the app is a
+# lie. Without -target, swiftc pins minos to the *build host's* OS version, so a
+# bundle compiled on macOS 26 dies in dyld on macOS 15 no matter what the plist
+# says. (We shipped exactly that mistake once; see docs/BUILDING-MACOS-APP.md #3.)
+ARCHS="${WHALE_ARCHS:-arm64 x86_64}"
+MACOS_MIN="${WHALE_MACOS_MIN:-13.0}"
+
 # icon framing (tuned by eye)
 ICON_SCALE=0.92      # character size as a fraction of the canvas
 ICON_OFFSET_Y=0.05   # vertical offset, fraction of canvas (0 = flush to bottom)
@@ -75,9 +87,22 @@ for s in 16 32 128 256 512; do
 done
 /usr/bin/iconutil -c icns "$ICONSET" -o "$BUILD/assets/AppIcon.icns"
 
-echo "=== 4. compile the app ==="
+echo "=== 4. compile the app ($ARCHS / macOS $MACOS_MIN+) ==="
 cd "$BUILD"
-/usr/bin/swiftc -sdk "$SDK" -O -swift-version 5 -o "$BUILD/WhaleLauncher" "$BUILD/main.swift" -framework Cocoa
+SLICES=()
+for arch in ${=ARCHS}; do
+  echo "  $arch ..."
+  /usr/bin/swiftc -sdk "$SDK" -target "$arch-apple-macos$MACOS_MIN" -O -swift-version 5 \
+    -o "$BUILD/WhaleLauncher.$arch" "$BUILD/main.swift" -framework Cocoa
+  SLICES+=("$BUILD/WhaleLauncher.$arch")
+done
+if [ ${#SLICES[@]} -gt 1 ]; then
+  /usr/bin/lipo -create "${SLICES[@]}" -output "$BUILD/WhaleLauncher"
+else
+  cp "${SLICES[1]}" "$BUILD/WhaleLauncher"
+fi
+echo "  archs : $(/usr/bin/lipo -archs "$BUILD/WhaleLauncher")"
+echo "  minos : $(/usr/bin/otool -l "$BUILD/WhaleLauncher" | /usr/bin/grep -A4 LC_BUILD_VERSION | /usr/bin/awk '/minos/{print $2}' | /usr/bin/head -1)"
 
 echo "=== 5. assemble bundle ==="
 BUNDLE="$BUILD/大肥鱼.app"
@@ -100,11 +125,14 @@ cat > "$BUNDLE/Contents/Info.plist" <<'PLIST'
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleSignature</key><string>????</string>
-    <key>CFBundleShortVersionString</key><string>2.3</string>
-    <key>CFBundleVersion</key><string>5</string>
+    <key>CFBundleShortVersionString</key><string>2.4</string>
+    <key>CFBundleVersion</key><string>6</string>
     <key>LSUIElement</key><true/>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>NSHighResolutionCapable</key><true/>
+    <!-- 「打开网页」用 AppleScript 把已开着的 DSH 标签切到前台。没有这条，
+         macOS 仍会弹自动化授权，但弹窗里没有一句解释用户为什么要给。 -->
+    <key>NSAppleEventsUsageDescription</key><string>大肥鱼 需要控制浏览器，才能把已打开的 DSH 页面切到前台。</string>
 </dict>
 </plist>
 PLIST

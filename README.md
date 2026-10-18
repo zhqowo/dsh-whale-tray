@@ -228,6 +228,7 @@ app.manifest      # Windows DPI 感知清单
 extension/        # Windows 配套浏览器扩展(唤醒后台 DSH 标签)
 whale*.*          # Windows 图标(裁剪 + 缩放 + 白色提亮修复版)
 macos/            # macOS 版大肥鱼(Swift)+ install.sh + dsh-ctl.sh
+docs/             # 怎么做一个能分发的 macOS 菜单栏 app(24 个坑 + 验证清单)
 tools/            # 配套小工具(check-perms.sh 权限体检 / uictl 界面操作)
 dist/             # 打包好的 macOS .app
 package.json      # dsh 插件清单(声明 dsh.bundle,供 dsh plugin add 安装)

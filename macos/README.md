@@ -21,6 +21,9 @@ whale256.png       # 角色素材(透明背景)
 README.md
 ```
 
+> 🔧 **想照着自己做一个 Mac 菜单栏 app?** 编译 / 签名 / TCC / 分发的 24 个坑和验证命令
+> 单独抽成了一份通用文档:[`../docs/BUILDING-MACOS-APP.md`](../docs/BUILDING-MACOS-APP.md)。
+
 ---
 
 ## 一键安装(给别人用)
