@@ -1,6 +1,6 @@
 {
   "name": "dsh-whale-tray",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "🐳 大肥鱼 — DeepSeek Harness (dsh) launcher: a Windows tray app and a macOS menu-bar app to start/stop the dsh service, summon the web UI, restart and top up — independent of the dsh process. Ships the compiled desktop apps from Releases.",
   "license": "MIT",
   "keywords": [

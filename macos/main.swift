@@ -3,14 +3,14 @@
 // menu bar, showing service state and offering start/stop/restart/open/billing.
 import Cocoa
 
-let PORT: UInt16 = 3080
 let HOME = NSHomeDirectory()
-let CTL = "\(HOME)/DeepSeekHarness/bin/dsh-ctl.sh"
 
 // MARK: - optional user config
 
-/// Optional config file, so people whose dsh does not run DeepSeek models can point
-/// the billing entry somewhere else **without recompiling**.
+/// Optional config file, so the launcher can drive a DSH that lives somewhere other
+/// than `~/DeepSeekHarness`, on a port other than 3080, with a browser other than
+/// Edge — and so people whose dsh does not run DeepSeek models can point the billing
+/// entry somewhere else — all **without recompiling**.
 ///
 /// Looked up in order — the first existing file wins, and every key is optional:
 ///
@@ -21,6 +21,10 @@ let CTL = "\(HOME)/DeepSeekHarness/bin/dsh-ctl.sh"
 ///
 ///   | key            | default                                 |
 ///   |----------------|-----------------------------------------|
+///   | `dshDir`       | `~/DeepSeekHarness`                     |
+///   | `ctlPath`      | `<dshDir>/bin/dsh-ctl.sh`               |
+///   | `port`         | `3080`                                  |
+///   | `browser`      | `Microsoft Edge`                        |
 ///   | `billingUrl`   | `https://platform.deepseek.com/usage`   |
 ///   | `billingLabel` | `充值`                                   |
 ///
@@ -29,6 +33,23 @@ let CTL = "\(HOME)/DeepSeekHarness/bin/dsh-ctl.sh"
 struct WhaleConfig {
     var billingUrl = "https://platform.deepseek.com/usage"
     var billingLabel = "充值"
+    var dshDir = "\(HOME)/DeepSeekHarness"
+    var ctlPathOverride: String? = nil
+    var portNumber = 3080
+    var browser = "Microsoft Edge"
+
+    /// The service-control script the launcher shells out to. *Everything* that
+    /// touches the DSH process goes through it, so a machine with a different layout
+    /// only has to point `dshDir` (or `ctlPath`) somewhere else.
+    var ctlPath: String {
+        if let override = ctlPathOverride, !override.isEmpty {
+            return (override as NSString).expandingTildeInPath
+        }
+        return "\(dshDir)/bin/dsh-ctl.sh"
+    }
+
+    /// Clamped, so a typo in the config can never produce a nonsense `sin_port`.
+    var port: UInt16 { UInt16(max(1, min(65535, portNumber))) }
 
     /// Recomputed on each lookup rather than cached in a `static let`: the lookup is
     /// trivially cheap, and caching it silently pins the first environment it ever saw.
@@ -50,6 +71,12 @@ struct WhaleConfig {
             else { continue }
             if let url = obj["billingUrl"] as? String, !url.isEmpty { cfg.billingUrl = url }
             if let label = obj["billingLabel"] as? String, !label.isEmpty { cfg.billingLabel = label }
+            if let dir = obj["dshDir"] as? String, !dir.isEmpty {
+                cfg.dshDir = (dir as NSString).expandingTildeInPath
+            }
+            if let ctl = obj["ctlPath"] as? String, !ctl.isEmpty { cfg.ctlPathOverride = ctl }
+            if let port = obj["port"] as? Int { cfg.portNumber = port }
+            if let browser = obj["browser"] as? String, !browser.isEmpty { cfg.browser = browser }
             break
         }
         return cfg
@@ -69,7 +96,7 @@ func dshIsRunning() -> Bool {
 
     var addr = sockaddr_in()
     addr.sin_family = sa_family_t(AF_INET)
-    addr.sin_port = PORT.bigEndian
+    addr.sin_port = CONFIG.port.bigEndian
     addr.sin_addr.s_addr = inet_addr("127.0.0.1")
     addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
 
@@ -81,12 +108,18 @@ func dshIsRunning() -> Bool {
     return rc == 0
 }
 
+/// POSIX single-quote escaping. Without this a `dshDir` containing a space
+/// (`~/Code/Deep Seek Harness`) would be split by zsh into two arguments.
+func shellQuote(_ s: String) -> String {
+    "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
+}
+
 /// Run a shell command with a PATH that can find node/pnpm.
 @discardableResult
 func shell(_ args: [String]) -> String {
     let p = Process()
     p.executableURL = URL(fileURLWithPath: "/bin/zsh")
-    p.arguments = ["-lc", args.joined(separator: " ")]
+    p.arguments = ["-lc", args.map(shellQuote).joined(separator: " ")]
     var env = ProcessInfo.processInfo.environment
     env["PATH"] = "\(HOME)/.local/node/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
     p.environment = env
@@ -99,7 +132,31 @@ func shell(_ args: [String]) -> String {
     return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 }
 
-func ctl(_ arg: String) -> String { shell([CTL, arg]) }
+func ctl(_ arg: String) -> String { shell([CONFIG.ctlPath, arg]) }
+
+/// True when the service-control script the launcher depends on is actually there.
+/// Everything the menu bar does (start/stop/restart/url) funnels through it, so a
+/// missing script would otherwise surface as a silently dead menu.
+func ctlIsInstalled() -> Bool {
+    FileManager.default.isReadableFile(atPath: CONFIG.ctlPath)
+}
+
+/// URL to open for "打开 DSH 网页".
+///
+/// dsh >= 0.1.7 gates the Web UI behind a per-process token: hitting
+/// `http://127.0.0.1:3080/` bare returns **401**. `dsh-ctl.sh url` prints the token
+/// URL harvested from the running process's log; the first visit trades it for a
+/// 30-day cookie, after which the bare URL works again. We still fall back to the
+/// bare URL so a pre-0.1.7 dsh (or an older `dsh-ctl.sh`) keeps working.
+func resolvedWebURL() -> URL {
+    let out = ctl("url").trimmingCharacters(in: .whitespacesAndNewlines)
+    // `ctl` returns the script's stderr too, so only accept a line that really is a URL.
+    for line in out.split(separator: "\n") {
+        let candidate = line.trimmingCharacters(in: .whitespaces)
+        if candidate.hasPrefix("http://"), let url = URL(string: candidate) { return url }
+    }
+    return URL(string: "http://127.0.0.1:\(CONFIG.port)/")!
+}
 
 /// Run an AppleScript snippet through osascript and return its stdout.
 func runOsascript(_ script: String) -> String {
@@ -125,13 +182,13 @@ func runOsascript(_ script: String) -> String {
 /// Returns true when an existing tab was raised.
 func raiseExistingDshTab() -> Bool {
     let script = """
-    tell application "Microsoft Edge"
+    tell application "\(CONFIG.browser)"
         set wc to count of windows
         repeat with i from 1 to wc
             set tc to count of tabs of window i
             repeat with j from 1 to tc
                 set u to URL of tab j of window i
-                if u starts with "http://127.0.0.1:\(PORT)" then
+                if u starts with "http://127.0.0.1:\(CONFIG.port)" then
                     set active tab index of window i to j
                     set index of window i to 1
                     activate
@@ -221,6 +278,16 @@ final class WhaleDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func updateIconState() {
         let running = dshIsRunning()
         statusItem.button?.alphaValue = running ? 1.0 : 0.35
+        if !ctlIsInstalled() {
+            // A missing service script is the #1 reason a fresh copy "does nothing":
+            // the menu opens, every action fails, and nothing says why.
+            statusItem.button?.toolTip = """
+            ⚠️ 找不到服务脚本
+            \(CONFIG.ctlPath)
+            把它放到该路径，或在 ~/.config/dsh-whale-tray/config.json 里设置 dshDir / ctlPath
+            """
+            return
+        }
         statusItem.button?.toolTip = running
             ? "DSH 运行中 · 点击查看菜单"
             : "DSH 未运行 · 点击启动"
@@ -232,10 +299,18 @@ final class WhaleDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let running = dshIsRunning()
 
         let status = NSMenuItem(
-            title: running ? "🐳 DSH 运行中  ·  http://127.0.0.1:\(PORT)" : "😴 DSH 未运行",
+            title: running ? "🐳 DSH 运行中  ·  http://127.0.0.1:\(CONFIG.port)" : "😴 DSH 未运行",
             action: nil, keyEquivalent: "")
         status.isEnabled = false
         menu.addItem(status)
+
+        if !ctlIsInstalled() {
+            let warn = NSMenuItem(
+                title: "⚠️ 缺少 \(CONFIG.ctlPath)", action: nil, keyEquivalent: "")
+            warn.isEnabled = false
+            menu.addItem(warn)
+        }
+
         menu.addItem(.separator())
 
         let toggle = NSMenuItem(
@@ -285,9 +360,11 @@ final class WhaleDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updateIconState()
         // Prefer raising the tab the user already has, so clicking the whale doesn't
         // pile up duplicate DSH tabs. Falls back to opening one when there is none
-        // (or when Automation permission for Edge hasn't been granted).
+        // (or when Automation permission for the browser hasn't been granted).
         if raiseExistingDshTab() { return }
-        NSWorkspace.shared.open(URL(string: "http://127.0.0.1:\(PORT)/")!)
+        // Goes through `dsh-ctl.sh url`, which appends the per-process token that
+        // dsh >= 0.1.7 requires — a bare URL is a 401 page there.
+        NSWorkspace.shared.open(resolvedWebURL())
     }
 
     @objc func openBilling() {
@@ -309,6 +386,18 @@ final class WhaleDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 }
 
 // MARK: - entry point
+
+// Debug hook: `WhaleLauncher --print-url` prints exactly what 打开网页 would open,
+// then exits. When a fresh install lands on a 401 page this tells you in one line
+// whether the token reached the launcher or the problem is in dsh-ctl.sh.
+//   /Applications/大肥鱼.app/Contents/MacOS/WhaleLauncher --print-url
+if CommandLine.arguments.contains("--print-url") {
+    print("ctl    : \(CONFIG.ctlPath)  [\(ctlIsInstalled() ? "found" : "MISSING")]")
+    print("port   : \(CONFIG.port)")
+    print("browser: \(CONFIG.browser)")
+    print("url    : \(resolvedWebURL().absoluteString)")
+    exit(0)
+}
 
 let app = NSApplication.shared
 let delegate = WhaleDelegate()

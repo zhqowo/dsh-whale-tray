@@ -80,12 +80,37 @@ A Swift + Cocoa `NSStatusItem` app. A whale in the menu bar: **left click switch
 right click opens the menu** (status · toggle · restart · open web · top-up · quit); full colour while
 running, dimmed while stopped.
 
+### One-command install (recommended)
+
 ```sh
-cd macos && zsh build.sh     # builds and installs ~/Desktop/大肥鱼.app
+curl -fsSL https://raw.githubusercontent.com/zhqowo/dsh-whale-tray/main/macos/install.sh | zsh
 ```
 
-Details — icon composition, how left/right click separation works, AppleScript gotchas, and the
-**must-read TCC permission section** — live in [`macos/README.md`](macos/README.md).
+It locates your dsh, installs the app into `/Applications`, drops the `dsh-ctl.sh` service script,
+writes the config, and finishes with a health check. dsh somewhere else? `--dir`. Not port 3080?
+`--port`. Not Edge? `--browser "Google Chrome"`.
+
+```sh
+# run from a local checkout instead
+zsh macos/install.sh --dir ~/code/DeepSeekHarness --port 3100 --browser "Google Chrome"
+```
+
+**If all you want is "start it with one click, open the UI", you are done** — the only thing you must
+click is the one-time *"Da Fei Yu wants to control Microsoft Edge"* Automation prompt.
+
+### Build it yourself (when hacking on the code)
+
+```sh
+WHALE_APP_OUT=/tmp/staging/DaFeiYu.app zsh macos/build.sh   # staging: your Desktop copy is untouched
+```
+
+> ⚠️ `zsh macos/build.sh` **without** `WHALE_APP_OUT` overwrites and rebuilds `~/Desktop/大肥鱼.app` —
+> which changes its cdhash and invalidates every TCC permission. Always use staging while developing.
+
+Details — config keys, the `doctor` health check, `--print-url` debugging,
+**why this cannot be installed like a plugin**, **the four tiers of feature trimming**, icon
+composition, left/right click separation, AppleScript gotchas, and the **must-read TCC permission
+section** — live in [`macos/README.md`](macos/README.md).
 
 ---
 
@@ -119,7 +144,13 @@ Drop a JSON file and you can repoint it **without recompiling**:
 
   // Windows only: where your dsh is installed.
   // Left out, it probes D:\DeepSeekHarness, then %USERPROFILE%\DeepSeekHarness
-  "dshHome":      "C:\\DeepSeekHarness"
+  "dshHome":      "C:\\DeepSeekHarness",
+
+  // macOS only: where your dsh is installed / the port / which browser to drive.
+  // The menu-bar app and dsh-ctl.sh read the same file, so one place is enough.
+  "dshDir":       "~/DeepSeekHarness",
+  "port":         3080,
+  "browser":      "Microsoft Edge"
 }
 ```
 
@@ -128,11 +159,19 @@ Drop a JSON file and you can repoint it **without recompiling**:
 | `billingUrl` | `https://platform.deepseek.com/usage` | page the billing entry opens |
 | `billingLabel` | `充值` | label of that menu item |
 | `dshHome` | auto-detected | **Windows only**: dsh install root |
+| `dshDir` | `~/DeepSeekHarness` | **macOS only**: dsh install root |
+| `port` | `3080` | **macOS only**: DSH port |
+| `browser` | `Microsoft Edge` | **macOS only**: which browser AppleScript drives |
+| `logPath` | `<dshDir>/dsh-web.log` | **macOS only**: where the `?token=` is harvested from (required on 0.1.7+) |
+| `workdir` | `<dshDir>/projects` | **macOS only**: cwd when starting dsh |
+| `ctlPath` | `<dshDir>/bin/dsh-ctl.sh` | **macOS only**: service script location, rarely needed |
 
 - **Every key is optional** — set only the ones you care about
 - Missing file / malformed JSON / wrong type → **silently falls back to the defaults**; the tray
   or menu bar must never fail to come up over an optional config
 - The CLI (`macos/dsh-ctl.sh billing`) reads the same file
+- macOS `dsh-ctl.sh` also honours environment variables (they win over the file):
+  `DSH_DIR` `DSH_PORT` `DSH_LOG` `DSH_BIN` `DSH_WORKDIR` `DSH_BROWSER` `DSH_BILLING_URL`
 - JSON comments are not supported — the block above is marked `jsonc` only to allow annotations
 </details>
 
@@ -149,34 +188,42 @@ The old `openclaw/` directory was removed from this repo.
 
 ---
 
-## Install as a DSH plugin
+## Install as a DSH plugin (manifest only, not the app)
 
-This repo declares a `dsh.bundle` manifest, so it can be installed as a plugin
-(lets the agent discover and manage the launcher):
+This repo declares a `dsh.bundle` manifest, so `dsh plugin add` recognises it:
 
 ```sh
 dsh plugin --profile web add github:zhqowo/dsh-whale-tray
 ```
 
-> What gets installed is only the **manifest** — the app that does the work is the tray/menu-bar
-> binary built from `WhaleTray.cs` / `macos/`. Desktop apps cannot be distributed over npm;
-> this entry point exists so DSH can discover it.
+> ⚠️ **This does not install the menu-bar app on your Mac.** It only registers the repo in your
+> profile so the plugin market / `find_dsh_plugin` can find it.
+> Four things block a true one-step install: ① desktop apps cannot be distributed over npm
+> ② ad-hoc signing gets stopped by Gatekeeper ③ TCC grants cannot be automated
+> ④ install path, port and browser differ per machine.
+> The full explanation, what you need to do locally, and how to trim features are in
+> [`macos/README.md`](macos/README.md).
+>
+> **To actually install it, use the one-command `curl` above.**
 
 ## Downloads
 
-`dist/` holds the packaged macOS apps (unzip and run):
+**Use [Releases](https://github.com/zhqowo/dsh-whale-tray/releases/latest), or the one-command
+installer above.**
 
-| File | What |
-|---|---|
-| `dist/大肥鱼.app.zip` | macOS menu-bar Da Fei Yu |
+| Where | File | What |
+|---|---|---|
+| Releases | `DaFeiYu.app.zip` | macOS menu-bar version; `install.sh` pulls this stable URL |
+| `dist/` | `大肥鱼.app.zip` | legacy archive, kept as-is |
 
 > 🦞 The OpenClaw Lobster download lives in the new repo:
 > [openclaw-menubar/releases](https://github.com/zhqowo/openclaw-menubar/releases/latest)
 
 > Because they are ad-hoc signed, Gatekeeper blocks the first launch: right-click → **Open**, or
-> `xattr -d com.apple.quarantine 大肥鱼.app`.
+> `xattr -dr com.apple.quarantine /Applications/大肥鱼.app`.
 > ⚠️ **Do not rebuild `大肥鱼.app` yourself** — a rebuild changes its cdhash and invalidates every
-> TCC permission it holds.
+> TCC permission it holds. Upgrading to a new release changes it too: if screenshot / UI control
+> starts reporting a permission error, remove the app from the privacy list and add it back.
 
 ## Layout
 
@@ -185,7 +232,7 @@ WhaleTray.cs      # Windows main program (C#, WinForms, .NET Framework 4.x)
 app.manifest      # Windows DPI awareness manifest
 extension/        # Windows companion extension (wakes the background DSH tab)
 whale*.*          # Windows icons (cut-out + resized + small-size white-hair fix)
-macos/            # macOS Da Fei Yu (Swift) + dsh-ctl.sh
+macos/            # macOS Da Fei Yu (Swift) + install.sh + dsh-ctl.sh
 tools/            # Helper tools (check-perms.sh health check / uictl UI automation)
 dist/             # Packaged macOS .app bundles
 package.json      # dsh plugin manifest (declares dsh.bundle for `dsh plugin add`)

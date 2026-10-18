@@ -77,12 +77,35 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:winexe /
 Swift + Cocoa 的 `NSStatusItem` 应用。菜单栏右侧一只鲸鱼,**左键切标签、右键弹菜单**
 (状态 · 开启/关闭 · 重启 · 打开网页 · 充值 · 退出),运行中彩色 / 停止时半透明。
 
+### 一键安装(推荐)
+
 ```sh
-cd macos && zsh build.sh     # 编译并安装到 ~/Desktop/大肥鱼.app
+curl -fsSL https://raw.githubusercontent.com/zhqowo/dsh-whale-tray/main/macos/install.sh | zsh
 ```
 
-细节(图标合成、左右键分离原理、AppleScript 的坑、**以及必读的 TCC 权限章节**)
-见 [`macos/README.md`](macos/README.md)。
+它会自动找到你的 dsh、把 app 装进 `/Applications`、装好服务脚本 `dsh-ctl.sh`、写好配置,最后跑一遍体检。
+dsh 不在 `~/DeepSeekHarness`?加 `--dir`;端口不是 3080?加 `--port`;不用 Edge?加 `--browser "Google Chrome"`。
+
+```sh
+# 从仓库本地跑(需要先 git clone)
+zsh macos/install.sh --dir ~/code/DeepSeekHarness --port 3100 --browser "Google Chrome"
+```
+
+**只要你想要"一键启动 + 打开网页",这就完了** —— 唯一需要点的是第一次点「打开网页」时弹的
+「大肥鱼 想要控制 Microsoft Edge」,点允许。
+
+### 自己编译(改代码时)
+
+```sh
+WHALE_APP_OUT=/tmp/staging/大肥鱼.app zsh macos/build.sh   # 暂存,不动你桌面上那份
+```
+
+> ⚠️ `zsh macos/build.sh` 不加 `WHALE_APP_OUT` 会**覆盖并重建** `~/Desktop/大肥鱼.app`——
+> 那会换 cdhash,让 TCC 里存的授权全部失效。改代码时一律用暂存模式。
+
+细节(配置项、`doctor` 体检、`--print-url` 调试、**为什么不能像插件那样一键装**、
+**功能阉割的四档做法**、图标合成、左右键分离原理、AppleScript 的坑、**必读的 TCC 权限章节**)
+见 **[`macos/README.md`](macos/README.md)**。
 
 ---
 
@@ -115,7 +138,13 @@ cd macos && zsh build.sh     # 编译并安装到 ~/Desktop/大肥鱼.app
 
   // 仅 Windows:你的 dsh 装在哪儿
   // 留空则自动探测 D:\DeepSeekHarness,再退回 %USERPROFILE%\DeepSeekHarness
-  "dshHome":      "C:\\DeepSeekHarness"
+  "dshHome":      "C:\\DeepSeekHarness",
+
+  // 仅 macOS:你的 dsh 装在哪儿 / 端口 / 用哪个浏览器
+  // 端口和浏览器改了这一处就行,菜单栏 app 和 dsh-ctl.sh 读的是同一个文件
+  "dshDir":       "~/DeepSeekHarness",
+  "port":         3080,
+  "browser":      "Microsoft Edge"
 }
 ```
 
@@ -124,10 +153,18 @@ cd macos && zsh build.sh     # 编译并安装到 ~/Desktop/大肥鱼.app
 | `billingUrl` | `https://platform.deepseek.com/usage` | 充值项打开的网址 |
 | `billingLabel` | `充值` | 充值项的显示文字 |
 | `dshHome` | 自动探测 | **仅 Windows**:dsh 安装根目录 |
+| `dshDir` | `~/DeepSeekHarness` | **仅 macOS**:dsh 安装根目录 |
+| `port` | `3080` | **仅 macOS**:DSH 端口 |
+| `browser` | `Microsoft Edge` | **仅 macOS**:AppleScript 控制哪个浏览器 |
+| `logPath` | `<dshDir>/dsh-web.log` | **仅 macOS**:从这个日志捞 `?token=`(0.1.7+ 必需) |
+| `workdir` | `<dshDir>/projects` | **仅 macOS**:启动 dsh 时的 cwd |
+| `ctlPath` | `<dshDir>/bin/dsh-ctl.sh` | **仅 macOS**:服务脚本位置,一般不用写 |
 
 - **所有键都是可选的**,给几个生效几个
 - 文件不存在 / JSON 写错 / 类型不对 → **静默回退默认值**,绝不让托盘或菜单栏起不来
 - 命令行 `macos/dsh-ctl.sh billing` 读同一个文件
+- macOS 版 `dsh-ctl.sh` 还认环境变量(优先级高于文件):
+  `DSH_DIR` `DSH_PORT` `DSH_LOG` `DSH_BIN` `DSH_WORKDIR` `DSH_BROWSER` `DSH_BILLING_URL`
 - 不支持 JSON 注释 —— 上面只是为了标注才写成 `jsonc`
 </details>
 
@@ -147,32 +184,41 @@ OpenClaw 网关的菜单栏开关**曾经**和本仓库放在一起,现已迁到
 
 ---
 
-## 作为 DSH 插件安装
+## 作为 DSH 插件安装(只登记清单,不装 app)
 
-本仓库声明了 `dsh.bundle` manifest,所以可以直接当插件装(用于让 agent 自己拉起/管理 DSH):
+本仓库声明了 `dsh.bundle` manifest,所以能被 `dsh plugin add` 认出来:
 
 ```sh
 dsh plugin --profile web add github:zhqowo/dsh-whale-tray
 ```
 
-> 装的只是**清单**,真正干活的是 `WhaleTray.cs` / `macos/` 里编译出来的菜单栏应用 ——
-> 桌面应用没法通过 npm 分发。这个入口的意义是让 DSH 能发现并管理它。
+> ⚠️ **这条命令不会把菜单栏 app 装到你的 Mac 上。** 它只是把仓库登记进 profile,
+> 让插件市场 / `find_dsh_plugin` 能搜到它。
+> 装不了的原因有四条:① 桌面 app 没法走 npm 分发 ② ad-hoc 签名会被 Gatekeeper 拦
+> ③ TCC 授权没法程序化 ④ 每台机器路径/端口/浏览器都不同。
+> 逐条解释 + 你需要在本机做什么 + 只要一部分功能时怎么阉割,全在
+> [`macos/README.md`](macos/README.md#为什么不能像插件一样一键装)。
+>
+> **想真正装好,用上面「一键安装」那条 curl。**
 
 ## 下载
 
-`dist/` 里是打包好的 macOS 应用(解压即用):
+**推荐直接用 [Releases](https://github.com/zhqowo/dsh-whale-tray/releases/latest),
+或者上面那条一键安装命令。**
 
-| 文件 | 说明 |
-|---|---|
-| `dist/大肥鱼.app.zip` | macOS 菜单栏版大肥鱼 |
+| 位置 | 文件 | 说明 |
+|---|---|---|
+| Releases | `DaFeiYu.app.zip` | macOS 菜单栏版;`install.sh` 就拉这个稳定 URL |
+| `dist/` | `大肥鱼.app.zip` | 旧的历史存档,保留不动 |
 
 > 🦞 OpenClaw 龙虾的下载在新仓库:
 > [openclaw-menubar/releases](https://github.com/zhqowo/openclaw-menubar/releases/latest)
 
 
 > 因为是 ad-hoc 签名,首次打开会被 Gatekeeper 拦一下:右键 →「打开」,或
-> `xattr -d com.apple.quarantine 大肥鱼.app`。
+> `xattr -dr com.apple.quarantine /Applications/大肥鱼.app`。
 > ⚠️ **别再自己重新编译 `大肥鱼.app`** —— 会换 cdhash,让 TCC 授权全部失效。
+> 升级到新版同理:截图/点界面报权限错时,把大肥鱼从隐私列表里删掉重新添加一次就好。
 
 ## 目录
 
@@ -181,7 +227,7 @@ WhaleTray.cs      # Windows 主程序(C#, WinForms, .NET Framework 4.x)
 app.manifest      # Windows DPI 感知清单
 extension/        # Windows 配套浏览器扩展(唤醒后台 DSH 标签)
 whale*.*          # Windows 图标(裁剪 + 缩放 + 白色提亮修复版)
-macos/            # macOS 版大肥鱼(Swift)+ dsh-ctl.sh
+macos/            # macOS 版大肥鱼(Swift)+ install.sh + dsh-ctl.sh
 tools/            # 配套小工具(check-perms.sh 权限体检 / uictl 界面操作)
 dist/             # 打包好的 macOS .app
 package.json      # dsh 插件清单(声明 dsh.bundle,供 dsh plugin add 安装)
